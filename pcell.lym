@@ -152,11 +152,11 @@ FONT = {
           [0,1,1,0],
           [0,1,1,0]],
 
-    'W': [[1,0,0,1],
-          [1,0,0,1],
-          [1,1,1,1],
-          [1,1,1,1],
-          [0,1,1,0]],
+    'W': [[1,0,0,0,1],
+          [1,0,0,0,1],
+          [1,0,1,0,1],
+          [1,1,0,1,1],
+          [1,0,0,0,1]],
 
     'X': [[1,0,0,1],
           [1,0,0,1],
@@ -358,15 +358,13 @@ class HologramText(pya.PCellDeclarationHelper):
         # Horizontal: each cell width equals row_pitch (square cells)
         cell_width = row_pitch
 
-        # Total character width = 4 cells, no gaps between grid elements
-        char_width = 4 * cell_width
         char_gap = cell_width  # space between characters
 
         # Box array pitch within each cell
         box_pitch = self.box_width + self.box_spacing
 
         # Number of vertical boxes that fit in each cell
-        if box_pitch > 0:
+        if box_pitch &gt; 0:
             n_boxes = int((cell_width + self.box_spacing) / box_pitch)
         else:
             n_boxes = 1
@@ -379,6 +377,9 @@ class HologramText(pya.PCellDeclarationHelper):
             glyph = FONT.get(ch)
             if glyph is None:
                 continue
+
+            # Variable width: derive from glyph data
+            glyph_cols = len(glyph[0])
 
             for row_idx, row in enumerate(glyph):
                 # Row 0 is the top row; y increases upward in layout
@@ -404,7 +405,7 @@ class HologramText(pya.PCellDeclarationHelper):
                             )
                             self.cell.shapes(self.layer_layer).insert(box)
 
-            x_offset += char_width + char_gap
+            x_offset += glyph_cols * cell_width + char_gap
 
 
 class HologramTextLib(pya.Library):
