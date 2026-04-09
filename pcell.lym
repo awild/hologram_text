@@ -43,7 +43,7 @@ FONT = {
           [1,0,0,1],
           [1,0,0,1],
           [1,1,1,0]],
-          
+
     'E': [[1,1,1,1],
           [1,0,0,0],
           [1,1,1,0],
@@ -68,11 +68,11 @@ FONT = {
           [1,0,0,1],
           [1,0,0,1]],
 
-    'I': [[1,1,1],
-          [0,1,0],
-          [0,1,0],
-          [0,1,0],
-          [1,1,1]],
+    'I': [[1,1,1,1],
+          [0,1,1,0],
+          [0,1,1,0],
+          [0,1,1,0],
+          [1,1,1,1]],
 
     'J': [[0,0,1,1],
           [0,0,0,1],
@@ -86,17 +86,17 @@ FONT = {
           [1,0,1,0],
           [1,0,0,1]],
 
-    'L': [[1,0,0],
-          [1,0,0],
-          [1,0,0],
-          [1,0,0],
-          [1,1,1]],
+    'L': [[1,0,0,0],
+          [1,0,0,0],
+          [1,0,0,0],
+          [1,0,0,0],
+          [1,1,1,1]],
 
-    'M': [[1,0,0,0,1],
-          [1,1,0,1,1],
-          [1,0,1,0,1],
-          [1,0,0,0,1],
-          [1,0,0,0,1]],
+    'M': [[1,0,0,1],
+          [1,1,1,1],
+          [1,1,1,1],
+          [1,0,0,1],
+          [1,0,0,1]],
 
     'N': [[1,0,0,1],
           [1,1,0,1],
@@ -134,11 +134,11 @@ FONT = {
           [0,0,0,1],
           [1,1,1,0]],
 
-    'T': [[1,1,1],
-          [0,1,0],
-          [0,1,0],
-          [0,1,0],
-          [0,1,0]],
+    'T': [[1,1,1,1],
+          [0,1,1,0],
+          [0,1,1,0],
+          [0,1,1,0],
+          [0,1,1,0]],
 
     'U': [[1,0,0,1],
           [1,0,0,1],
@@ -154,9 +154,9 @@ FONT = {
 
     'W': [[1,0,0,0,1],
           [1,0,0,0,1],
-          [1,0,0,0,1],
           [1,0,1,0,1],
-          [0,1,1,1,0]],
+          [1,1,0,1,1],
+          [1,0,0,0,1]],
 
     'X': [[1,0,0,1],
           [1,0,0,1],
@@ -164,11 +164,11 @@ FONT = {
           [1,0,0,1],
           [1,0,0,1]],
 
-    'Y': [[1,0,1],
-          [1,0,1],
-          [0,1,0],
-          [0,1,0],
-          [0,1,0]],
+    'Y': [[1,0,0,1],
+          [1,0,0,1],
+          [0,1,1,0],
+          [0,1,1,0],
+          [0,1,1,0]],
 
     'Z': [[1,1,1,1],
           [0,0,0,1],
@@ -308,11 +308,11 @@ FONT = {
           [0,0,0,0],
           [1,1,1,1]],
 
-    ' ': [[0,0,0],
-          [0,0,0],
-          [0,0,0],
-          [0,0,0],
-          [0,0,0]],
+    ' ': [[0,0,0,0],
+          [0,0,0,0],
+          [0,0,0,0],
+          [0,0,0,0],
+          [0,0,0,0]],
 }
 
 
@@ -322,8 +322,6 @@ class HologramText(pya.PCellDeclarationHelper):
         super(HologramText, self).__init__()
         self.param("text", self.TypeString, "Text", default="HELLO")
         self.param("text_height", self.TypeDouble, "Text Height (um)", default=10.0)
-        self.param("line_width", self.TypeDouble, "Line Width (um)", default=0.5)
-        self.param("line_spacing", self.TypeDouble, "Line Spacing (um)", default=0.5)
         self.param("box_width", self.TypeDouble, "Box Width (um)", default=0.1)
         self.param("box_spacing", self.TypeDouble, "Box Spacing (um)", default=0.1)
         self.param("layer", self.TypeLayer, "Layer", default=pya.LayerInfo(1, 0))
@@ -334,10 +332,6 @@ class HologramText(pya.PCellDeclarationHelper):
     def coerce_parameters_impl(self):
         if self.text_height &lt;= 0:
             self.text_height = 10.0
-        if self.line_width &lt;= 0:
-            self.line_width = 0.5
-        if self.line_spacing &lt; 0:
-            self.line_spacing = 0.0
         if self.box_width &lt;= 0:
             self.box_width = 0.1
         if self.box_spacing &lt; 0:
@@ -352,10 +346,11 @@ class HologramText(pya.PCellDeclarationHelper):
     def produce_impl(self):
         dbu = self.layout.dbu
 
-        # Vertical geometry: 5 rows, no gaps between grid elements
-        row_pitch = self.line_width
+        # Vertical geometry: 5 rows fill text_height, no gaps between rows.
+        # Each row is a horizontal line of height row_pitch.
+        row_pitch = self.text_height / 5.0
 
-        # Horizontal: each cell width equals row_pitch (square cells)
+        # Horizontal: each grid cell is square, same dimension as row_pitch
         cell_width = row_pitch
 
         char_gap = cell_width  # space between characters
@@ -364,12 +359,28 @@ class HologramText(pya.PCellDeclarationHelper):
         box_pitch = self.box_width + self.box_spacing
 
         # Number of vertical boxes that fit in each cell
-        if box_pitch &gt; 0:
+        if box_pitch > 0:
             n_boxes = int((cell_width + self.box_spacing) / box_pitch)
         else:
             n_boxes = 1
         if n_boxes &lt; 1:
             n_boxes = 1
+
+        # Prototype sub-cell containing a single vertical box at origin.
+        # Each "on" grid element becomes a CellInstArray of this prototype.
+        box_cell = self.layout.create_cell("_hologram_box")
+        box_cell.shapes(self.layer_layer).insert(
+            pya.Box(
+                0,
+                0,
+                int(round(self.box_width / dbu)),
+                int(round(row_pitch / dbu)),
+            )
+        )
+
+        # Array vector along x: one step = box_pitch
+        array_vec_a = pya.Vector(int(round(box_pitch / dbu)), 0)
+        array_vec_b = pya.Vector(0, 0)
 
         x_offset = 0.0
 
@@ -384,26 +395,22 @@ class HologramText(pya.PCellDeclarationHelper):
             for row_idx, row in enumerate(glyph):
                 # Row 0 is the top row; y increases upward in layout
                 y_bottom = (4 - row_idx) * row_pitch
-                y_top = y_bottom + self.line_width
-
                 yb = int(round(y_bottom / dbu))
-                yt = int(round(y_top / dbu))
 
                 for col_idx, pixel in enumerate(row):
                     if pixel:
                         cell_left = x_offset + col_idx * cell_width
+                        trans = pya.Trans(int(round(cell_left / dbu)), yb)
 
-                        for i in range(n_boxes):
-                            bx_left = cell_left + i * box_pitch
-                            bx_right = bx_left + self.box_width
-
-                            box = pya.Box(
-                                int(round(bx_left / dbu)),
-                                yb,
-                                int(round(bx_right / dbu)),
-                                yt,
-                            )
-                            self.cell.shapes(self.layer_layer).insert(box)
+                        inst = pya.CellInstArray(
+                            box_cell.cell_index(),
+                            trans,
+                            array_vec_a,
+                            array_vec_b,
+                            n_boxes,
+                            1,
+                        )
+                        self.cell.insert(inst)
 
             x_offset += glyph_cols * cell_width + char_gap
 
