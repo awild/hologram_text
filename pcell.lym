@@ -382,37 +382,47 @@ class HologramText(pya.PCellDeclarationHelper):
         array_vec_a = pya.Vector(int(round(box_pitch / dbu)), 0)
         array_vec_b = pya.Vector(0, 0)
 
-        x_offset = 0.0
+        # Split on literal \n (the user may type "\\n" or an actual newline)
+        lines = self.text.replace("\\n", "\n").split("\n")
 
-        for ch in self.text.upper():
-            glyph = FONT.get(ch)
-            if glyph is None:
-                continue
+        # Vertical pitch between lines of text: one character height + one row of gap
+        line_pitch = self.text_height + row_pitch
 
-            # Variable width: derive from glyph data
-            glyph_cols = len(glyph[0])
+        for line_idx, line in enumerate(lines):
+            # Line 0 is the top line; y decreases for each subsequent line
+            line_base_y = -line_idx * line_pitch
 
-            for row_idx, row in enumerate(glyph):
-                # Row 0 is the top row; y increases upward in layout
-                y_bottom = (4 - row_idx) * row_pitch
-                yb = int(round(y_bottom / dbu))
+            x_offset = 0.0
 
-                for col_idx, pixel in enumerate(row):
-                    if pixel:
-                        cell_left = x_offset + col_idx * cell_width
-                        trans = pya.Trans(int(round(cell_left / dbu)), yb)
+            for ch in line.upper():
+                glyph = FONT.get(ch)
+                if glyph is None:
+                    continue
 
-                        inst = pya.CellInstArray(
-                            box_cell.cell_index(),
-                            trans,
-                            array_vec_a,
-                            array_vec_b,
-                            n_boxes,
-                            1,
-                        )
-                        self.cell.insert(inst)
+                # Variable width: derive from glyph data
+                glyph_cols = len(glyph[0])
 
-            x_offset += glyph_cols * cell_width + char_gap
+                for row_idx, row in enumerate(glyph):
+                    # Row 0 is the top row; y increases upward in layout
+                    y_bottom = line_base_y + (4 - row_idx) * row_pitch
+                    yb = int(round(y_bottom / dbu))
+
+                    for col_idx, pixel in enumerate(row):
+                        if pixel:
+                            cell_left = x_offset + col_idx * cell_width
+                            trans = pya.Trans(int(round(cell_left / dbu)), yb)
+
+                            inst = pya.CellInstArray(
+                                box_cell.cell_index(),
+                                trans,
+                                array_vec_a,
+                                array_vec_b,
+                                n_boxes,
+                                1,
+                            )
+                            self.cell.insert(inst)
+
+                x_offset += glyph_cols * cell_width + char_gap
 
 
 class HologramTextLib(pya.Library):
