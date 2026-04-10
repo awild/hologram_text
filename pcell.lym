@@ -810,10 +810,10 @@ FONT_7X9 = {
 }
 
 
-# Registry of available fonts: name -> (glyph_dict, num_rows)
+# Registry of available fonts: name -> (glyph_dict, num_rows, char_spacing_cells)
 FONTS = {
-    "4x5": (FONT_4X5, 5),
-    "7x9": (FONT_7X9, 9),
+    "4x5": (FONT_4X5, 5, 1),
+    "7x9": (FONT_7X9, 9, 2),
 }
 
 
@@ -823,8 +823,9 @@ class HologramText(pya.PCellDeclarationHelper):
         super(HologramText, self).__init__()
         self.param("text", self.TypeString, "Text", default="HELLO")
         self.param("text_height", self.TypeDouble, "Text Height (um)", default=10.0)
+        font_choices = [(name, name) for name in FONTS.keys()]
         self.param("font", self.TypeString, "Font", default="4x5",
-                   choices=[("4x5 Compact", "4x5"), ("7x9 Detailed", "7x9")])
+                   choices=font_choices)
         self.param("justify", self.TypeInt, "Justification", default=0,
                    choices=[("Left", 0), ("Right", 1)])
         self.param("box_width", self.TypeDouble, "Box Width (um)", default=0.1)
@@ -852,7 +853,7 @@ class HologramText(pya.PCellDeclarationHelper):
         dbu = self.layout.dbu
 
         # Look up the selected font; fall back to 4x5 if unknown
-        font_data, num_rows = FONTS.get(self.font, FONTS["4x5"])
+        font_data, num_rows, char_spacing_cells = FONTS.get(self.font, FONTS["4x5"])
 
         # Vertical geometry: num_rows rows fill text_height, no gaps between rows.
         row_pitch = self.text_height / float(num_rows)
@@ -860,7 +861,8 @@ class HologramText(pya.PCellDeclarationHelper):
         # Horizontal: each grid cell is square, same dimension as row_pitch
         cell_width = row_pitch
 
-        char_gap = cell_width  # space between characters
+        # Gap between characters: specified in number of cells per font
+        char_gap = char_spacing_cells * cell_width
 
         # Box array pitch within each cell
         box_pitch = self.box_width + self.box_spacing
